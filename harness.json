@@ -6,9 +6,7 @@
   },
   "paths": {
     "state_dir": ".agent",
-    "state_file": ".agent/tdd-state.json",
-    "log_dir": ".agent/logs",
-    "report_file": ".agent/report.md"
+    "task_dir": ".agent/tasks"
   },
   "policy": {
     "require_start_before_red": true,

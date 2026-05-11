@@ -9,9 +9,9 @@ cycle or claim completion without executable evidence.
 
 ## What Is Included
 
-- `AGENTS.md`: operating rules for coding agents.
-- `SPEC.md`: task specification template focused on acceptance criteria.
-- `TODO.md`: working checklist the agent keeps current.
+- `AGENTS.md`: opt-in operating rules for TDD Harness Mode.
+- `SPEC.md`: root task specification template.
+- `TODO.md`: root task checklist template.
 - `harness.json`: policy and command configuration.
 - `bin/tdd-agent-harness`: CLI entrypoint for installed copies.
 - `scripts/tdd-cycle`: phase gate runner that records state and logs.
@@ -130,69 +130,88 @@ explicitly ask it to merge or replace them.
 
 ### Run A TDD Cycle
 
-1. Use `SPEC.md` to describe the next feature or bug fix.
-2. Start the TDD cycle:
+TDD Harness Mode is opt-in. Use it when the developer explicitly asks for TDD
+Harness Mode, TDD, or red/green/check/review. Ordinary coding requests should
+follow the target repo's normal instructions.
+
+1. Start the TDD cycle:
 
 ```bash
-./scripts/tdd-cycle start --id auth-rate-limit --spec SPEC.md
+./scripts/tdd-cycle start --id auth-rate-limit --reset
 ```
 
-3. Let the agent infer use cases and ask clarification questions for any product
-   decision that changes correctness. For detailed UI or frontend-originated
-   flows, the agent should ask whether to include Playwright/browser verification.
-4. Record the plan gate:
+This creates task-local working files:
+
+```text
+.agent/tasks/auth-rate-limit/SPEC.md
+.agent/tasks/auth-rate-limit/TODO.md
+.agent/tasks/auth-rate-limit/state.json
+.agent/tasks/auth-rate-limit/logs/
+.agent/tasks/auth-rate-limit/report.md
+```
+
+Root `SPEC.md` and `TODO.md` are templates. For active TDD work, read and update
+the task-local files shown by:
 
 ```bash
-./scripts/tdd-cycle plan \
+./scripts/tdd-cycle paths --task auth-rate-limit
+```
+
+2. Let the agent infer use cases and ask clarification questions for any product
+   decision that changes correctness. For detailed UI or frontend-originated
+   flows, the agent should ask whether to include Playwright/browser verification.
+3. Record the plan gate:
+
+```bash
+./scripts/tdd-cycle plan --task auth-rate-limit \
   --summary "Rate limit failed login attempts by IP and reset on success." \
   --test-command "pytest tests/test_auth.py::test_rate_limit" \
   --playwright not-applicable
 ```
 
-5. Write or ask the agent to write the failing test.
-6. Prove the red phase:
+4. Write or ask the agent to write the failing test.
+5. Prove the red phase:
 
 ```bash
-./scripts/tdd-cycle red -- ./scripts/test-target pytest tests/test_auth.py::test_rate_limit
+./scripts/tdd-cycle red --task auth-rate-limit -- ./scripts/test-target pytest tests/test_auth.py::test_rate_limit
 ```
 
-7. Confirm semantic red:
+6. Confirm semantic red:
 
 ```bash
-./scripts/tdd-cycle confirm-red \
+./scripts/tdd-cycle confirm-red --task auth-rate-limit \
   --category missing-behavior \
   --reason "The focused test fails because login failures are not rate limited yet."
 ```
 
-8. Implement the smallest passing change.
-9. Prove the green phase:
+7. Implement the smallest passing change.
+8. Prove the green phase:
 
 ```bash
-./scripts/tdd-cycle green -- ./scripts/test-target pytest tests/test_auth.py::test_rate_limit
+./scripts/tdd-cycle green --task auth-rate-limit -- ./scripts/test-target pytest tests/test_auth.py::test_rate_limit
 ```
 
-10. Run the full verification gate:
+9. Run the full verification gate:
 
 ```bash
-./scripts/tdd-cycle check
+./scripts/tdd-cycle check --task auth-rate-limit
 ```
 
-11. Review the final diff and produce the report:
+10. Review the final diff and produce the report:
 
 ```bash
-./scripts/tdd-cycle review
-./scripts/tdd-cycle done
+./scripts/tdd-cycle review --task auth-rate-limit
+./scripts/tdd-cycle done --task auth-rate-limit
 ```
 
-In the default single-task mode, generated state, logs, and reports are written
-under `.agent/tdd-state.json`, `.agent/logs/`, and `.agent/report.md`.
+### Multi-Agent Work In One Worktree
 
-### Parallel Agents In One Worktree
-
-When multiple agents share one worktree, start each cycle in task-scoped mode:
+Task-local mode is the default. When multiple agents share one worktree, give
+each agent a different task id:
 
 ```bash
-./scripts/tdd-cycle start --id checkout-flow --parallel --reset
+./scripts/tdd-cycle start --id checkout-flow --reset
+./scripts/tdd-cycle paths --task checkout-flow
 ./scripts/tdd-cycle plan --task checkout-flow \
   --summary "Checkout behavior is covered by a focused regression test." \
   --test-command "pytest tests/test_checkout.py::test_checkout_flow" \
@@ -207,14 +226,16 @@ When multiple agents share one worktree, start each cycle in task-scoped mode:
 ./scripts/tdd-cycle done --task checkout-flow
 ```
 
-Task-scoped mode writes evidence under `.agent/tasks/<task-id>/`:
+Each task writes active documents and evidence under `.agent/tasks/<task-id>/`:
 
+- `.agent/tasks/<task-id>/SPEC.md`
+- `.agent/tasks/<task-id>/TODO.md`
 - `.agent/tasks/<task-id>/state.json`
 - `.agent/tasks/<task-id>/logs/`
 - `.agent/tasks/<task-id>/report.md`
 
-Use one task id per agent. Commands without `--parallel` and `--task` keep the
-original single-task behavior.
+Use one task id per agent. Code files are still shared, so use separate git
+worktrees or explicit path ownership for high-risk parallel edits.
 
 ## Agent Prompt Pattern
 
@@ -236,18 +257,17 @@ Required sequence:
 2. Infer use cases and edge cases.
 3. Ask clarification questions before test generation when a developer decision changes correctness.
    Ask whether to use Playwright/browser verification for detailed UI or frontend-originated flows.
-4. Run `./scripts/tdd-cycle plan --summary ... --test-command ... --playwright ...`.
-   If multiple agents share one worktree, start with `./scripts/tdd-cycle start --id <task-id> --parallel --reset`
-   and pass `--task <task-id>` to every later harness gate.
-5. Update `TODO.md` with the test plan, assumptions, and resolved decisions.
-6. Write a failing test before implementation.
-7. Run `./scripts/tdd-cycle red -- <targeted test command>`.
-8. Run `./scripts/tdd-cycle confirm-red --category missing-behavior --reason ...`.
-9. Implement the smallest change.
-10. Run `./scripts/tdd-cycle green -- <targeted test command>`.
-11. Run `./scripts/tdd-cycle check`.
-12. Run `./scripts/tdd-cycle review`.
-13. Summarize changed files, test results, and residual risk.
+4. Run `./scripts/tdd-cycle start --id <task-id> --reset`, then `./scripts/tdd-cycle paths --task <task-id>`.
+5. Read and update the task-local `SPEC.md` and `TODO.md` printed by `paths`.
+6. Run `./scripts/tdd-cycle plan --task <task-id> --summary ... --test-command ... --playwright ...`.
+7. Write a failing test before implementation.
+8. Run `./scripts/tdd-cycle red --task <task-id> -- <targeted test command>`.
+9. Run `./scripts/tdd-cycle confirm-red --task <task-id> --category missing-behavior --reason ...`.
+10. Implement the smallest change.
+11. Run `./scripts/tdd-cycle green --task <task-id> -- <targeted test command>`.
+12. Run `./scripts/tdd-cycle check --task <task-id>`.
+13. Run `./scripts/tdd-cycle review --task <task-id>`.
+14. Summarize changed files, test results, and residual risk.
 ```
 
 ## Policy
@@ -263,9 +283,9 @@ The default policy requires:
 - logs for every gate command;
 - a final report before done.
 
-For parallel agents in one worktree, task-scoped runs keep each task's state,
-logs, and report under `.agent/tasks/<task-id>/`. Same-task concurrent edits are
-still a coordination problem, so split agents by task id or worktree.
+Task-local runs keep each task's documents, state, logs, and report under
+`.agent/tasks/<task-id>/`. Same-task concurrent edits are still a coordination
+problem, so split agents by task id or worktree.
 
 If the target project is a git repository, the review command also reports changed
 files, warns when no test-looking file changed, flags likely test weakening, and

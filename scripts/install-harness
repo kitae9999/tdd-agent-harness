@@ -24,26 +24,19 @@ TDD_AGENTS_SECTION = """\
 
 ## TDD Harness Mode
 
-When a task is requested under TDD harness mode:
+TDD Harness Mode is available in this repo only when the developer explicitly
+asks for it, for example by saying "TDD harness mode", "TDD로 구현", or
+"red/green/check/review로 진행".
 
-1. Infer use cases and edge cases before writing tests.
-2. Ask clarification questions when a developer decision changes correctness.
-3. For detailed UI or frontend-originated flows, ask whether Playwright/browser verification should be included.
-4. Run `./scripts/tdd-cycle doctor` when installing or validating the harness.
-5. Run `./scripts/tdd-cycle plan --summary ... --test-command ... --playwright ...` before red.
-6. Add or update a focused failing test before production code.
-7. Run `./scripts/tdd-cycle red -- <targeted test command>`.
-8. Run `./scripts/tdd-cycle confirm-red --category <category> --reason <reason>`.
-9. Implement the smallest change to pass the focused test.
-10. Run `./scripts/tdd-cycle green -- <same targeted test command>`.
-11. Run `./scripts/tdd-cycle check`.
-12. Run `./scripts/tdd-cycle review`.
-13. Do not claim completion if full check failed or was not run.
+For ordinary coding requests, follow the repo's normal instructions and do not
+force the TDD harness workflow.
 
-If multiple agents share one worktree, use task-scoped mode:
+When TDD Harness Mode is explicitly requested, use task-local documents and
+evidence:
 
 ```bash
-./scripts/tdd-cycle start --id <task-id> --parallel --reset
+./scripts/tdd-cycle start --id <task-id> --reset
+./scripts/tdd-cycle paths --task <task-id>
 ./scripts/tdd-cycle plan --task <task-id> --summary ... --test-command ... --playwright ...
 ./scripts/tdd-cycle red --task <task-id> -- <targeted test command>
 ./scripts/tdd-cycle confirm-red --task <task-id> --category <category> --reason <reason>
@@ -51,6 +44,10 @@ If multiple agents share one worktree, use task-scoped mode:
 ./scripts/tdd-cycle check --task <task-id>
 ./scripts/tdd-cycle review --task <task-id>
 ```
+
+Root `SPEC.md` and `TODO.md` are templates. In TDD Harness Mode, read and update
+the task-local `SPEC.md` and `TODO.md` shown by `./scripts/tdd-cycle paths`, not
+the root templates.
 """
 
 

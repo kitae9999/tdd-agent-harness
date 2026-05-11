@@ -5,10 +5,13 @@ This harness separates agent behavior from project verification.
 ## Layers
 
 1. Agent instructions: `AGENTS.md`
-2. Task specification: `SPEC.md`
-3. State and logs:
-   - single-task mode: `.agent/tdd-state.json`, `.agent/logs/`
-   - task-scoped mode: `.agent/tasks/<task-id>/state.json`, `.agent/tasks/<task-id>/logs/`
+2. Root task templates: `SPEC.md`, `TODO.md`
+3. Task-local documents, state, and logs:
+   - `.agent/tasks/<task-id>/SPEC.md`
+   - `.agent/tasks/<task-id>/TODO.md`
+   - `.agent/tasks/<task-id>/state.json`
+   - `.agent/tasks/<task-id>/logs/`
+   - `.agent/tasks/<task-id>/report.md`
 4. Gate runner: `scripts/tdd-cycle`
 5. Project commands: `scripts/test-target`, `scripts/check`
 
@@ -37,15 +40,14 @@ The green phase is blocked until semantic red is confirmed. A failed red caused
 by syntax, imports, broken fixtures, timeouts, or environment setup does not prove
 the missing behavior and should be fixed before implementation.
 
-## State Layouts
+## State Layout
 
-The default mode is intentionally simple and keeps one active task in
-`.agent/tdd-state.json`. That is suitable for one agent in one worktree.
-
-For multiple agents in one worktree, use task-scoped mode:
+Task-local mode is the default. `start` always creates task-local documents and
+evidence under `.agent/tasks/<task-id>/`:
 
 ```bash
-./scripts/tdd-cycle start --id auth-rate-limit --parallel --reset
+./scripts/tdd-cycle start --id auth-rate-limit --reset
+./scripts/tdd-cycle paths --task auth-rate-limit
 ./scripts/tdd-cycle plan --task auth-rate-limit --summary ... --test-command ... --playwright ...
 ./scripts/tdd-cycle red --task auth-rate-limit -- <targeted test command>
 ./scripts/tdd-cycle confirm-red --task auth-rate-limit --category missing-behavior --reason ...
@@ -54,9 +56,12 @@ For multiple agents in one worktree, use task-scoped mode:
 ./scripts/tdd-cycle review --task auth-rate-limit
 ```
 
+Root `SPEC.md` and `TODO.md` are templates. In an active TDD task, agents should
+read and update the task-local files printed by `paths`, not the root templates.
+
 The task id is slugged for paths, so `Auth Rate Limit` writes under
-`.agent/tasks/auth-rate-limit/`. Later commands can also select the task with the
-`TDD_HARNESS_TASK` or `TDD_TASK_ID` environment variable. Use one task id per
+`.agent/tasks/auth-rate-limit/`. Later commands select the task with
+`--task <task-id>`, `TDD_HARNESS_TASK`, or `TDD_TASK_ID`. Use one task id per
 agent; two agents intentionally writing to the same task id still need external
 coordination.
 
@@ -75,12 +80,13 @@ pnpm test
 Run a focused test with:
 
 ```bash
-./scripts/tdd-cycle plan \
+./scripts/tdd-cycle start --id auth-behavior --reset
+./scripts/tdd-cycle plan --task auth-behavior \
   --summary "Auth behavior is covered by a focused component/unit test." \
   --test-command "pnpm vitest run src/auth/auth.test.ts" \
   --playwright not-applicable
-./scripts/tdd-cycle red -- ./scripts/test-target pnpm vitest run src/auth/auth.test.ts
-./scripts/tdd-cycle confirm-red --category missing-behavior --reason "The expected behavior is not implemented yet."
+./scripts/tdd-cycle red --task auth-behavior -- ./scripts/test-target pnpm vitest run src/auth/auth.test.ts
+./scripts/tdd-cycle confirm-red --task auth-behavior --category missing-behavior --reason "The expected behavior is not implemented yet."
 ```
 
 ### Python
@@ -88,12 +94,13 @@ Run a focused test with:
 Use:
 
 ```bash
-./scripts/tdd-cycle plan \
+./scripts/tdd-cycle start --id auth-rate-limit --reset
+./scripts/tdd-cycle plan --task auth-rate-limit \
   --summary "Rate limiting is covered by a focused auth regression test." \
   --test-command "pytest tests/test_auth.py::test_rate_limit" \
   --playwright not-applicable
-./scripts/tdd-cycle red -- ./scripts/test-target pytest tests/test_auth.py::test_rate_limit
-./scripts/tdd-cycle confirm-red --category missing-behavior --reason "The service does not enforce the limit yet."
+./scripts/tdd-cycle red --task auth-rate-limit -- ./scripts/test-target pytest tests/test_auth.py::test_rate_limit
+./scripts/tdd-cycle confirm-red --task auth-rate-limit --category missing-behavior --reason "The service does not enforce the limit yet."
 ```
 
 Then set `scripts/check` to run:
@@ -109,12 +116,13 @@ mypy .
 Use:
 
 ```bash
-./scripts/tdd-cycle plan \
+./scripts/tdd-cycle start --id rate-limit --reset
+./scripts/tdd-cycle plan --task rate-limit \
   --summary "Domain behavior is covered by a focused cargo test." \
   --test-command "cargo test rate_limit" \
   --playwright not-applicable
-./scripts/tdd-cycle red -- ./scripts/test-target cargo test rate_limit
-./scripts/tdd-cycle confirm-red --category missing-behavior --reason "The expected branch is not implemented yet."
+./scripts/tdd-cycle red --task rate-limit -- ./scripts/test-target cargo test rate_limit
+./scripts/tdd-cycle confirm-red --task rate-limit --category missing-behavior --reason "The expected branch is not implemented yet."
 ```
 
 Then set `scripts/check` to run:
@@ -209,8 +217,8 @@ For stricter teams, add these gates:
 ## Multi-Agent Flow
 
 If using multiple agents in one worktree, give each independent task its own
-task-scoped harness state. If agents are collaborating on one feature, prefer
-separate git worktrees or explicit ownership of files and phases.
+task-local harness state and documents. If agents are collaborating on one
+feature, prefer separate git worktrees or explicit ownership of files and phases.
 
 Split responsibilities by phase:
 

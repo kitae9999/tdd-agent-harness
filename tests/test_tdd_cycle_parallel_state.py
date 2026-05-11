@@ -37,8 +37,8 @@ class ParallelStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
-            self.run_cycle(cwd, "start", "--id", "Alpha Task", "--parallel", "--reset")
-            self.run_cycle(cwd, "start", "--id", "Beta Task", "--parallel", "--reset")
+            self.run_cycle(cwd, "start", "--id", "Alpha Task", "--reset")
+            self.run_cycle(cwd, "start", "--id", "Beta Task", "--reset")
 
             self.assertTrue((cwd / ".agent" / "tasks" / "alpha-task" / "state.json").exists())
             self.assertTrue((cwd / ".agent" / "tasks" / "beta-task" / "state.json").exists())
@@ -99,14 +99,14 @@ class ParallelStateTests(unittest.TestCase):
             status = self.run_cycle(cwd, "status", "--task", "Beta Task")
             self.assertEqual(json.loads(status.stdout)["task_id"], "Beta Task")
 
-    def test_legacy_state_path_remains_default(self) -> None:
+    def test_default_state_path_is_task_local(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
-            self.run_cycle(cwd, "start", "--id", "legacy-task", "--reset")
+            self.run_cycle(cwd, "start", "--id", "default-task", "--reset")
 
-            self.assertTrue((cwd / ".agent" / "tdd-state.json").exists())
-            self.assertFalse((cwd / ".agent" / "tasks" / "legacy-task" / "state.json").exists())
+            self.assertFalse((cwd / ".agent" / "tdd-state.json").exists())
+            self.assertTrue((cwd / ".agent" / "tasks" / "default-task" / "state.json").exists())
 
 
 if __name__ == "__main__":

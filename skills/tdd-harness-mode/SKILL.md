@@ -36,22 +36,8 @@ Use the local harness commands:
 
 ```bash
 ./scripts/tdd-cycle start --id <task-id> --spec SPEC.md --reset
+./scripts/tdd-cycle paths --task <task-id>
 ./scripts/tdd-cycle doctor
-./scripts/tdd-cycle plan --summary "<plan>" --test-command "<focused test command>" --playwright yes|no|not-applicable
-./scripts/tdd-cycle red -- ./scripts/test-target <focused test command>
-./scripts/tdd-cycle confirm-red --category missing-behavior --reason "<why red is meaningful>"
-./scripts/tdd-cycle green -- ./scripts/test-target <same focused test command>
-./scripts/tdd-cycle check
-./scripts/tdd-cycle review
-./scripts/tdd-cycle done
-```
-
-Keep `TODO.md` current while working. Use the same targeted command for red and green.
-
-If multiple agents are sharing one worktree, use task-scoped state instead:
-
-```bash
-./scripts/tdd-cycle start --id <task-id> --spec SPEC.md --parallel --reset
 ./scripts/tdd-cycle plan --task <task-id> --summary "<plan>" --test-command "<focused test command>" --playwright yes|no|not-applicable
 ./scripts/tdd-cycle red --task <task-id> -- ./scripts/test-target <focused test command>
 ./scripts/tdd-cycle confirm-red --task <task-id> --category missing-behavior --reason "<why red is meaningful>"
@@ -61,8 +47,11 @@ If multiple agents are sharing one worktree, use task-scoped state instead:
 ./scripts/tdd-cycle done --task <task-id>
 ```
 
-Task-scoped runs write evidence under `.agent/tasks/<task-id>/` and avoid
-colliding with another task's state, logs, or report.
+Use the task-local `SPEC.md` and `TODO.md` printed by `paths`, not the root
+templates. Use the same targeted command for red and green.
+
+Task-local runs write documents and evidence under `.agent/tasks/<task-id>/` and
+avoid colliding with another task's state, logs, report, SPEC, or TODO.
 
 If the repo has an older installed harness and the `tdd-agent-harness` CLI is
 available, update conservatively before starting new work:
@@ -102,17 +91,16 @@ When a user asks for a code change under this skill:
 3. Separate inferred defaults from developer decision points.
 4. If any decision point changes the test oracle or public behavior, ask concise questions and stop before editing tests.
 5. After the developer answers, update the test plan and identify the smallest focused test that proves the requested behavior.
-6. Run the plan gate before editing tests.
-   If another agent may be active in the same worktree, start with `--parallel`
-   and pass `--task <task-id>` to every later gate.
-7. Add or update that test before changing production code.
-8. Run the red gate and inspect the failure log. If the failure is syntax, import, fixture, environment noise, timeout, or an incorrect assertion, fix the test/setup and rerun red.
-9. Run `confirm-red` only when the failure proves the intended missing behavior.
-10. Implement the smallest change to pass the focused test.
-11. Run the green gate with the exact same targeted command.
-12. Refactor only after green, then rerun the focused test if refactoring changed behavior-sensitive code.
-13. Run full check.
-14. Run review and report changed files, plan/red/confirm-red/green/check commands, results, and remaining risk.
+6. Run `start`, then `paths`, and read/update the task-local SPEC/TODO paths printed there.
+7. Run the plan gate before editing tests.
+8. Add or update that test before changing production code.
+9. Run the red gate and inspect the failure log. If the failure is syntax, import, fixture, environment noise, timeout, or an incorrect assertion, fix the test/setup and rerun red.
+10. Run `confirm-red` only when the failure proves the intended missing behavior.
+11. Implement the smallest change to pass the focused test.
+12. Run the green gate with the exact same targeted command.
+13. Refactor only after green, then rerun the focused test if refactoring changed behavior-sensitive code.
+14. Run full check.
+15. Run review and report changed files, plan/red/confirm-red/green/check commands, results, and remaining risk.
 
 ## Clarification Gate
 
