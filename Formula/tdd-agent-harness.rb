@@ -1,8 +1,8 @@
 class TddAgentHarness < Formula
   desc "Strict TDD harness for coding agents with executable quality gates"
   homepage "https://github.com/kitae9999/tdd-agent-harness"
-  url "https://github.com/kitae9999/tdd-agent-harness/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "1ee84b4f4e6148bd2140355ce6065b719fd97d0c7f17fbfca9d4ee157bb7c9dc"
+  url "https://github.com/kitae9999/tdd-agent-harness/archive/refs/tags/v0.1.1.tar.gz"
+  sha256 "aba162e5bb4a682a0198aa0e16e6b715bdec6a23aaf06764c19b6e5dad3b2cd3"
   license "MIT"
 
   head "https://github.com/kitae9999/tdd-agent-harness.git", branch: "main"
