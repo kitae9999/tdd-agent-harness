@@ -18,6 +18,7 @@ cycle or claim completion without executable evidence.
 - `scripts/test-target`: targeted test wrapper.
 - `scripts/check`: full verification wrapper.
 - `scripts/install-harness`: conservative installer for existing repos.
+- `scripts/update-harness`: safe updater for existing harness installs.
 - `Formula/tdd-agent-harness.rb`: Homebrew-compatible formula for HEAD installs.
 - `docs/harness-design.md`: architecture and adaptation notes.
 - `evals/cases/example.md`: example regression/evaluation case format.
@@ -50,6 +51,31 @@ To install the latest `main` branch instead of the latest release:
 ```bash
 brew install --HEAD kitae9999/tdd-agent-harness/tdd-agent-harness
 ```
+
+### Updating An Existing Project
+
+After upgrading the CLI, update an already-installed project safely:
+
+```bash
+brew update
+brew upgrade tdd-agent-harness
+tdd-agent-harness update /path/to/your-project --dry-run
+tdd-agent-harness update /path/to/your-project
+```
+
+`update` overwrites only managed core harness files, currently
+`scripts/tdd-cycle`. It preserves project-owned files and prints review notes for
+them:
+
+- `AGENTS.md`
+- `harness.json`
+- `SPEC.md`
+- `TODO.md`
+- `scripts/check`
+- `scripts/test-target`
+
+This keeps repo-specific test commands and agent instructions intact. Review the
+printed project-owned files manually if you want to adopt new template guidance.
 
 ### Option B: Install From A Clone
 

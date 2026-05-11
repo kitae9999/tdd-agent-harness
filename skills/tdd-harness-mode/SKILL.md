@@ -64,6 +64,18 @@ If multiple agents are sharing one worktree, use task-scoped state instead:
 Task-scoped runs write evidence under `.agent/tasks/<task-id>/` and avoid
 colliding with another task's state, logs, or report.
 
+If the repo has an older installed harness and the `tdd-agent-harness` CLI is
+available, update conservatively before starting new work:
+
+```bash
+tdd-agent-harness update . --dry-run
+tdd-agent-harness update .
+```
+
+The update command refreshes managed core files such as `scripts/tdd-cycle` and
+preserves project-owned files like `AGENTS.md`, `harness.json`, `scripts/check`,
+and `scripts/test-target`.
+
 ## If The Repo Does Not Have The Harness
 
 The template lives in `assets/tdd-harness-template/`.

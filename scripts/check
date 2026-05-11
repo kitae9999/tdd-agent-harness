@@ -120,6 +120,9 @@ if [[ "$ran" -eq 0 ]]; then
   if [[ -f scripts/install-harness ]]; then
     python3 -c "import pathlib; compile(pathlib.Path('scripts/install-harness').read_text(), 'scripts/install-harness', 'exec')"
   fi
+  if [[ -f scripts/update-harness ]]; then
+    python3 -c "import pathlib; compile(pathlib.Path('scripts/update-harness').read_text(), 'scripts/update-harness', 'exec')"
+  fi
   if [[ -f bin/tdd-agent-harness ]]; then
     bash -n bin/tdd-agent-harness
   fi

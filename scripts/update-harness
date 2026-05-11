@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import filecmp
+import shutil
+import stat
+import subprocess
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+MANAGED_FILES = [
+    "scripts/tdd-cycle",
+]
+
+PROJECT_OWNED_FILES = [
+    "AGENTS.md",
+    "harness.json",
+    "SPEC.md",
+    "TODO.md",
+    "scripts/check",
+    "scripts/test-target",
+]
+
+
+def printable(message: str, target: Path) -> str:
+    return message.replace(str(ROOT), "<harness>").replace(str(target), "<target>")
+
+
+def looks_like_installed_harness(target: Path) -> bool:
+    if (target / "scripts" / "tdd-cycle").exists():
+        return True
+    if (target / "harness.json").exists():
+        return True
+    agents = target / "AGENTS.md"
+    if agents.exists():
+        try:
+            return "TDD Harness Mode" in agents.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return False
+    return False
+
+
+def copy_managed(src: Path, dst: Path, *, dry_run: bool) -> str:
+    if dry_run:
+        return f"would update {dst}"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    mode = dst.stat().st_mode
+    dst.chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    return f"updated {dst}"
+
+
+def project_owned_notice(src: Path, dst: Path) -> str:
+    if not dst.exists():
+        return f"missing project-owned {dst}; run install if this file should exist"
+    if src.exists() and filecmp.cmp(src, dst, shallow=False):
+        return f"kept project-owned {dst}; already matches template"
+    return f"kept project-owned {dst}; compare manually before changing"
+
+
+def ensure_gitignore(target: Path, *, dry_run: bool) -> str:
+    path = target / ".gitignore"
+    if path.exists():
+        text = path.read_text(encoding="utf-8")
+        if any(line.strip() == ".agent/" for line in text.splitlines()):
+            return ".agent/ already present in .gitignore"
+        if dry_run:
+            return "would append .agent/ to .gitignore"
+        suffix = "" if text.endswith("\n") or not text else "\n"
+        path.write_text(text + suffix + ".agent/\n", encoding="utf-8")
+        return "appended .agent/ to .gitignore"
+    if dry_run:
+        return "would create .gitignore with .agent/"
+    path.write_text(".agent/\n", encoding="utf-8")
+    return "created .gitignore with .agent/"
+
+
+def run_doctor(target: Path) -> int:
+    result = subprocess.run(
+        ["./scripts/tdd-cycle", "doctor"],
+        cwd=target,
+        text=True,
+    )
+    return int(result.returncode)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Safely update an installed TDD Agent Harness.")
+    parser.add_argument("target", help="Target project directory.")
+    parser.add_argument("--dry-run", action="store_true", help="Print intended changes without writing files.")
+    parser.add_argument("--no-doctor", action="store_true", help="Skip running ./scripts/tdd-cycle doctor after update.")
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+    target = Path(args.target).expanduser().resolve()
+    if not target.exists() or not target.is_dir():
+        print(f"target directory does not exist: {target}", file=sys.stderr)
+        return 2
+
+    if not looks_like_installed_harness(target):
+        print(
+            f"target does not look like an installed TDD harness: {target}",
+            file=sys.stderr,
+        )
+        print("Run `tdd-agent-harness install <target>` first.", file=sys.stderr)
+        return 66
+
+    messages: list[str] = []
+    for name in MANAGED_FILES:
+        messages.append(copy_managed(ROOT / name, target / name, dry_run=args.dry_run))
+    for name in PROJECT_OWNED_FILES:
+        messages.append(project_owned_notice(ROOT / name, target / name))
+    messages.append(ensure_gitignore(target, dry_run=args.dry_run))
+
+    for message in messages:
+        print(printable(message, target))
+
+    if args.dry_run or args.no_doctor:
+        return 0
+
+    print("")
+    print("Running doctor...")
+    sys.stdout.flush()
+    return run_doctor(target)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -9,11 +9,13 @@ tdd-agent-harness
 
 Usage:
   tdd-agent-harness install <target-project> [--append-agents] [--dry-run] [--force] [--no-doctor]
+  tdd-agent-harness update <target-project> [--dry-run] [--no-doctor]
   tdd-agent-harness doctor [args...]
   tdd-agent-harness help
 
 Commands:
   install   Install the harness into an existing project.
+  update    Safely update managed harness files in an existing project.
   doctor    Run ./scripts/tdd-cycle doctor in the current project.
   help      Show this help.
 EOF
@@ -24,6 +26,10 @@ case "$cmd" in
   install)
     shift
     exec "$ROOT/scripts/install-harness" "$@"
+    ;;
+  update)
+    shift
+    exec "$ROOT/scripts/update-harness" "$@"
     ;;
   doctor)
     shift

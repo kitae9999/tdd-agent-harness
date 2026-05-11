@@ -154,6 +154,32 @@ The doctor checks harness files, executable bits, `.agent` gitignore coverage,
 project markers, package scripts, CI workflow presence, and Playwright/browser
 test detection. It records a state event when a task is active.
 
+## Updating Existing Installs
+
+Use the installed CLI to update an older harness inside an existing project:
+
+```bash
+tdd-agent-harness update /path/to/project --dry-run
+tdd-agent-harness update /path/to/project
+```
+
+The update command is conservative. It refreshes managed core files such as
+`scripts/tdd-cycle`, ensures `.agent/` is gitignored, and runs doctor unless
+`--no-doctor` is passed.
+
+It does not overwrite project-owned files:
+
+- `AGENTS.md`
+- `harness.json`
+- `SPEC.md`
+- `TODO.md`
+- `scripts/check`
+- `scripts/test-target`
+
+Those files often contain repo-specific policy, task state, or verification
+commands. The updater reports them so a developer can review template changes
+manually.
+
 ## UI And Browser Verification
 
 For detailed UI changes or frontend-originated flows, ask the developer whether
