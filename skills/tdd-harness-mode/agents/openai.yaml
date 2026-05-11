@@ -1,0 +1,4 @@
+interface:
+  display_name: "TDD Harness Mode"
+  short_description: "Enforce plan/red/confirm-red/green/check/review TDD workflows for coding agents."
+  default_prompt: "Work in TDD harness mode: infer use cases, ask blocking questions, record plan, prove red, confirm semantic red, implement green, run full check, then review."
