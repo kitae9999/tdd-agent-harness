@@ -48,6 +48,22 @@ Use the local harness commands:
 
 Keep `TODO.md` current while working. Use the same targeted command for red and green.
 
+If multiple agents are sharing one worktree, use task-scoped state instead:
+
+```bash
+./scripts/tdd-cycle start --id <task-id> --spec SPEC.md --parallel --reset
+./scripts/tdd-cycle plan --task <task-id> --summary "<plan>" --test-command "<focused test command>" --playwright yes|no|not-applicable
+./scripts/tdd-cycle red --task <task-id> -- ./scripts/test-target <focused test command>
+./scripts/tdd-cycle confirm-red --task <task-id> --category missing-behavior --reason "<why red is meaningful>"
+./scripts/tdd-cycle green --task <task-id> -- ./scripts/test-target <same focused test command>
+./scripts/tdd-cycle check --task <task-id>
+./scripts/tdd-cycle review --task <task-id>
+./scripts/tdd-cycle done --task <task-id>
+```
+
+Task-scoped runs write evidence under `.agent/tasks/<task-id>/` and avoid
+colliding with another task's state, logs, or report.
+
 ## If The Repo Does Not Have The Harness
 
 The template lives in `assets/tdd-harness-template/`.
@@ -75,6 +91,8 @@ When a user asks for a code change under this skill:
 4. If any decision point changes the test oracle or public behavior, ask concise questions and stop before editing tests.
 5. After the developer answers, update the test plan and identify the smallest focused test that proves the requested behavior.
 6. Run the plan gate before editing tests.
+   If another agent may be active in the same worktree, start with `--parallel`
+   and pass `--task <task-id>` to every later gate.
 7. Add or update that test before changing production code.
 8. Run the red gate and inspect the failure log. If the failure is syntax, import, fixture, environment noise, timeout, or an incorrect assertion, fix the test/setup and rerun red.
 9. Run `confirm-red` only when the failure proves the intended missing behavior.

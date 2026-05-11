@@ -90,8 +90,21 @@ if [[ -f pyproject.toml || -f pytest.ini || -d tests ]]; then
   elif python3 -m pytest --version >/dev/null 2>&1; then
     python3 -m pytest
     ran=1
+  elif [[ -d tests ]]; then
+    unittest_output="$(python3 -m unittest discover -s tests -p 'test_*.py' 2>&1)"
+    unittest_status="$?"
+    printf '%s\n' "$unittest_output"
+    if [[ "$unittest_status" -ne 0 ]]; then
+      exit "$unittest_status"
+    fi
+    if grep -q "Ran 0 tests" <<<"$unittest_output"; then
+      echo "unittest discovery found 0 tests." >&2
+      echo "Install pytest, add unittest-discoverable tests, edit scripts/check, or set HARNESS_FULL_CHECK." >&2
+      exit 65
+    fi
+    ran=1
   else
-    echo "Python project markers detected, but pytest is unavailable." >&2
+    echo "Python project markers detected, but neither pytest nor unittest-discoverable tests were available." >&2
     echo "Edit scripts/check or set HARNESS_FULL_CHECK." >&2
     exit 65
   fi

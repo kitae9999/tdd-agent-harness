@@ -29,6 +29,26 @@ traceable red/green/check cycle with logs and a final report.
 13. Run `./scripts/tdd-cycle check` before claiming completion.
 14. Run `./scripts/tdd-cycle review` and inspect the final diff.
 
+## Parallel Agents
+
+If multiple agents share one worktree, use task-scoped harness state:
+
+```bash
+./scripts/tdd-cycle start --id <task-id> --parallel --reset
+./scripts/tdd-cycle plan --task <task-id> --summary ... --test-command ... --playwright ...
+./scripts/tdd-cycle red --task <task-id> -- <targeted test command>
+./scripts/tdd-cycle confirm-red --task <task-id> --category <category> --reason <reason>
+./scripts/tdd-cycle green --task <task-id> -- <same targeted test command>
+./scripts/tdd-cycle check --task <task-id>
+./scripts/tdd-cycle review --task <task-id>
+./scripts/tdd-cycle done --task <task-id>
+```
+
+Task-scoped runs write to `.agent/tasks/<task-id>/state.json`,
+`.agent/tasks/<task-id>/logs/`, and `.agent/tasks/<task-id>/report.md`.
+Use different task ids for different agents. The legacy commands without
+`--parallel`/`--task` remain single-task mode and share `.agent/tdd-state.json`.
+
 ## Clarification Gate
 
 Ask the developer before generating tests when a decision affects user-visible

@@ -158,7 +158,37 @@ explicitly ask it to merge or replace them.
 ./scripts/tdd-cycle done
 ```
 
-Generated logs and state are written under `.agent/`.
+In the default single-task mode, generated state, logs, and reports are written
+under `.agent/tdd-state.json`, `.agent/logs/`, and `.agent/report.md`.
+
+### Parallel Agents In One Worktree
+
+When multiple agents share one worktree, start each cycle in task-scoped mode:
+
+```bash
+./scripts/tdd-cycle start --id checkout-flow --parallel --reset
+./scripts/tdd-cycle plan --task checkout-flow \
+  --summary "Checkout behavior is covered by a focused regression test." \
+  --test-command "pytest tests/test_checkout.py::test_checkout_flow" \
+  --playwright not-applicable
+./scripts/tdd-cycle red --task checkout-flow -- ./scripts/test-target pytest tests/test_checkout.py::test_checkout_flow
+./scripts/tdd-cycle confirm-red --task checkout-flow \
+  --category missing-behavior \
+  --reason "The focused test fails because checkout completion is not implemented yet."
+./scripts/tdd-cycle green --task checkout-flow -- ./scripts/test-target pytest tests/test_checkout.py::test_checkout_flow
+./scripts/tdd-cycle check --task checkout-flow
+./scripts/tdd-cycle review --task checkout-flow
+./scripts/tdd-cycle done --task checkout-flow
+```
+
+Task-scoped mode writes evidence under `.agent/tasks/<task-id>/`:
+
+- `.agent/tasks/<task-id>/state.json`
+- `.agent/tasks/<task-id>/logs/`
+- `.agent/tasks/<task-id>/report.md`
+
+Use one task id per agent. Commands without `--parallel` and `--task` keep the
+original single-task behavior.
 
 ## Agent Prompt Pattern
 
@@ -181,6 +211,8 @@ Required sequence:
 3. Ask clarification questions before test generation when a developer decision changes correctness.
    Ask whether to use Playwright/browser verification for detailed UI or frontend-originated flows.
 4. Run `./scripts/tdd-cycle plan --summary ... --test-command ... --playwright ...`.
+   If multiple agents share one worktree, start with `./scripts/tdd-cycle start --id <task-id> --parallel --reset`
+   and pass `--task <task-id>` to every later harness gate.
 5. Update `TODO.md` with the test plan, assumptions, and resolved decisions.
 6. Write a failing test before implementation.
 7. Run `./scripts/tdd-cycle red -- <targeted test command>`.
@@ -204,6 +236,10 @@ The default policy requires:
 - a full check before done;
 - logs for every gate command;
 - a final report before done.
+
+For parallel agents in one worktree, task-scoped runs keep each task's state,
+logs, and report under `.agent/tasks/<task-id>/`. Same-task concurrent edits are
+still a coordination problem, so split agents by task id or worktree.
 
 If the target project is a git repository, the review command also reports changed
 files, warns when no test-looking file changed, flags likely test weakening, and

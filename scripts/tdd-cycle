@@ -116,6 +116,44 @@ def configured_path(config: dict[str, Any], name: str) -> Path:
     return ROOT / config["paths"][name]
 
 
+def task_scoped_config(config: dict[str, Any], task_id: str) -> dict[str, Any]:
+    task_slug = slug(task_id)
+    task_root = Path(str(config["paths"].get("state_dir", ".agent"))) / "tasks" / task_slug
+    scoped = dict(config)
+    scoped["paths"] = dict(config["paths"])
+    scoped["paths"].update(
+        {
+            "state_dir": str(task_root),
+            "state_file": str(task_root / "state.json"),
+            "log_dir": str(task_root / "logs"),
+            "report_file": str(task_root / "report.md"),
+        }
+    )
+    scoped["_runtime"] = {
+        "state_scope": "task",
+        "task_id": task_id,
+        "task_slug": task_slug,
+    }
+    return scoped
+
+
+def runtime_config(config: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    task_id = ""
+    if getattr(args, "parallel", False):
+        task_id = str(args.id)
+    else:
+        task_id = str(getattr(args, "task", "") or "")
+        if not task_id:
+            task_id = os.environ.get("TDD_HARNESS_TASK", "") or os.environ.get("TDD_TASK_ID", "")
+
+    if task_id:
+        return task_scoped_config(config, task_id)
+
+    scoped = dict(config)
+    scoped["_runtime"] = {"state_scope": "legacy"}
+    return scoped
+
+
 def ensure_dirs(config: dict[str, Any]) -> None:
     configured_path(config, "state_dir").mkdir(parents=True, exist_ok=True)
     configured_path(config, "log_dir").mkdir(parents=True, exist_ok=True)
@@ -228,7 +266,7 @@ def append_event(
 
 def run_command(config: dict[str, Any], phase: str, command: list[str]) -> tuple[int, Path]:
     ensure_dirs(config)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     log_file = configured_path(config, "log_dir") / f"{stamp}-{phase}-{slug(command[0])}.log"
 
     print(f"$ {shell_join(command)}")
@@ -398,6 +436,10 @@ def doctor_findings(config: dict[str, Any]) -> dict[str, Any]:
         "tests_dir": (ROOT / "tests").exists() or (ROOT / "test").exists(),
         "playwright": detect_playwright(),
         "package_scripts": scripts,
+        "state_scope": config.get("_runtime", {}).get("state_scope", "legacy"),
+        "state_file": str(configured_path(config, "state_file").relative_to(ROOT)),
+        "log_dir": str(configured_path(config, "log_dir").relative_to(ROOT)),
+        "report_file": str(configured_path(config, "report_file").relative_to(ROOT)),
     }
     warnings: list[str] = []
     for path in ("scripts/tdd-cycle", "scripts/check", "scripts/test-target"):
@@ -595,7 +637,11 @@ def cmd_start(args: argparse.Namespace, config: dict[str, Any]) -> int:
         phase="start",
         status="passed",
         message="TDD cycle started.",
-        metadata={"spec": args.spec},
+        metadata={
+            "spec": args.spec,
+            "state_scope": config.get("_runtime", {}).get("state_scope", "legacy"),
+            "task_slug": config.get("_runtime", {}).get("task_slug"),
+        },
     )
     save_state(config, state)
     print(f"started task: {args.id}")
@@ -938,13 +984,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command_name", required=True)
 
+    def add_task_selector(subparser: argparse.ArgumentParser) -> None:
+        subparser.add_argument(
+            "--task",
+            default="",
+            help=(
+                "Task id for task-scoped state created by 'start --parallel'. "
+                "Can also be set with TDD_HARNESS_TASK or TDD_TASK_ID."
+            ),
+        )
+
     start = subparsers.add_parser("start", help="Start a new TDD task.")
     start.add_argument("--id", required=True, help="Task identifier, such as auth-rate-limit.")
     start.add_argument("--spec", default="SPEC.md", help="Spec file path.")
+    start.add_argument(
+        "--parallel",
+        action="store_true",
+        help="Store state, logs, and reports under .agent/tasks/<task-id>/ for parallel agents.",
+    )
     start.add_argument("--reset", action="store_true", help="Replace existing harness state.")
     start.set_defaults(func=cmd_start)
 
     plan = subparsers.add_parser("plan", help="Record the test plan before red.")
+    add_task_selector(plan)
     plan.add_argument("--summary", default="", help="Short summary of inferred use cases and test plan.")
     plan.add_argument("--test-command", default="", help="Focused test command planned for red and green.")
     plan.add_argument(
@@ -958,6 +1020,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan.set_defaults(func=cmd_plan)
 
     ui_decision = subparsers.add_parser("ui-decision", help="Record UI/browser verification decision.")
+    add_task_selector(ui_decision)
     ui_decision.add_argument(
         "--playwright",
         required=True,
@@ -969,10 +1032,12 @@ def build_parser() -> argparse.ArgumentParser:
     ui_decision.set_defaults(func=cmd_ui_decision)
 
     red = subparsers.add_parser("red", help="Run targeted command expecting failure.")
+    add_task_selector(red)
     red.add_argument("command", nargs=argparse.REMAINDER)
     red.set_defaults(func=cmd_red)
 
     confirm_red = subparsers.add_parser("confirm-red", help="Confirm that red failed for the intended reason.")
+    add_task_selector(confirm_red)
     confirm_red.add_argument(
         "--category",
         required=True,
@@ -993,23 +1058,29 @@ def build_parser() -> argparse.ArgumentParser:
     confirm_red.set_defaults(func=cmd_confirm_red)
 
     green = subparsers.add_parser("green", help="Run targeted command expecting success.")
+    add_task_selector(green)
     green.add_argument("command", nargs=argparse.REMAINDER)
     green.set_defaults(func=cmd_green)
 
     check = subparsers.add_parser("check", help="Run full verification expecting success.")
+    add_task_selector(check)
     check.add_argument("command", nargs=argparse.REMAINDER)
     check.set_defaults(func=cmd_check)
 
     review = subparsers.add_parser("review", help="Write a final review report.")
+    add_task_selector(review)
     review.set_defaults(func=cmd_review)
 
     done = subparsers.add_parser("done", help="Mark the task done after full check.")
+    add_task_selector(done)
     done.set_defaults(func=cmd_done)
 
     status = subparsers.add_parser("status", help="Print current harness state.")
+    add_task_selector(status)
     status.set_defaults(func=cmd_status)
 
     doctor = subparsers.add_parser("doctor", help="Inspect harness and project verification readiness.")
+    add_task_selector(doctor)
     doctor.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     doctor.set_defaults(func=cmd_doctor)
 
@@ -1020,6 +1091,7 @@ def main() -> int:
     config = load_config()
     parser = build_parser()
     args = parser.parse_args()
+    config = runtime_config(config, args)
     return int(args.func(args, config))
 
 

@@ -6,7 +6,9 @@ This harness separates agent behavior from project verification.
 
 1. Agent instructions: `AGENTS.md`
 2. Task specification: `SPEC.md`
-3. State and logs: `.agent/tdd-state.json`, `.agent/logs/`
+3. State and logs:
+   - single-task mode: `.agent/tdd-state.json`, `.agent/logs/`
+   - task-scoped mode: `.agent/tasks/<task-id>/state.json`, `.agent/tasks/<task-id>/logs/`
 4. Gate runner: `scripts/tdd-cycle`
 5. Project commands: `scripts/test-target`, `scripts/check`
 
@@ -34,6 +36,29 @@ goal is to prove that the new test catches missing behavior.
 The green phase is blocked until semantic red is confirmed. A failed red caused
 by syntax, imports, broken fixtures, timeouts, or environment setup does not prove
 the missing behavior and should be fixed before implementation.
+
+## State Layouts
+
+The default mode is intentionally simple and keeps one active task in
+`.agent/tdd-state.json`. That is suitable for one agent in one worktree.
+
+For multiple agents in one worktree, use task-scoped mode:
+
+```bash
+./scripts/tdd-cycle start --id auth-rate-limit --parallel --reset
+./scripts/tdd-cycle plan --task auth-rate-limit --summary ... --test-command ... --playwright ...
+./scripts/tdd-cycle red --task auth-rate-limit -- <targeted test command>
+./scripts/tdd-cycle confirm-red --task auth-rate-limit --category missing-behavior --reason ...
+./scripts/tdd-cycle green --task auth-rate-limit -- <same targeted test command>
+./scripts/tdd-cycle check --task auth-rate-limit
+./scripts/tdd-cycle review --task auth-rate-limit
+```
+
+The task id is slugged for paths, so `Auth Rate Limit` writes under
+`.agent/tasks/auth-rate-limit/`. Later commands can also select the task with the
+`TDD_HARNESS_TASK` or `TDD_TASK_ID` environment variable. Use one task id per
+agent; two agents intentionally writing to the same task id still need external
+coordination.
 
 ## Adapting To A Project
 
@@ -157,7 +182,11 @@ For stricter teams, add these gates:
 
 ## Multi-Agent Flow
 
-If using multiple agents, split responsibilities by phase:
+If using multiple agents in one worktree, give each independent task its own
+task-scoped harness state. If agents are collaborating on one feature, prefer
+separate git worktrees or explicit ownership of files and phases.
+
+Split responsibilities by phase:
 
 ```text
 Planner: clarifies acceptance criteria and writes test plan
