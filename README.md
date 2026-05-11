@@ -30,7 +30,7 @@ This repository can be tapped directly with a custom Homebrew tap URL:
 
 ```bash
 brew tap kitae9999/tdd-agent-harness https://github.com/kitae9999/tdd-agent-harness
-brew install --HEAD kitae9999/tdd-agent-harness/tdd-agent-harness
+brew install kitae9999/tdd-agent-harness/tdd-agent-harness
 ```
 
 Then install the harness into a project:
@@ -45,8 +45,11 @@ Append the TDD section to an existing `AGENTS.md`:
 tdd-agent-harness install /path/to/your-project --append-agents
 ```
 
-This formula currently installs from `main` with `--HEAD`. A stable Homebrew
-install without `--HEAD` should be added after the first versioned release.
+To install the latest `main` branch instead of the latest release:
+
+```bash
+brew install --HEAD kitae9999/tdd-agent-harness/tdd-agent-harness
+```
 
 ### Option B: Install From A Clone
 
