@@ -88,6 +88,18 @@ def run_doctor(target: Path) -> int:
     return int(result.returncode)
 
 
+def print_summary(*, dry_run: bool, managed_count: int, project_owned_count: int, doctor: str) -> None:
+    print("")
+    if dry_run:
+        print("Update preview complete.")
+        print(f"Managed files to update: {managed_count}")
+    else:
+        print("Update complete.")
+        print(f"Managed files updated: {managed_count}")
+    print(f"Project-owned files preserved: {project_owned_count}")
+    print(f"Doctor: {doctor}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Safely update an installed TDD Agent Harness.")
     parser.add_argument("target", help="Target project directory.")
@@ -122,12 +134,25 @@ def main() -> int:
         print(printable(message, target))
 
     if args.dry_run or args.no_doctor:
+        print_summary(
+            dry_run=args.dry_run,
+            managed_count=len(MANAGED_FILES),
+            project_owned_count=len(PROJECT_OWNED_FILES),
+            doctor="skipped",
+        )
         return 0
 
     print("")
     print("Running doctor...")
     sys.stdout.flush()
-    return run_doctor(target)
+    doctor_code = run_doctor(target)
+    print_summary(
+        dry_run=False,
+        managed_count=len(MANAGED_FILES),
+        project_owned_count=len(PROJECT_OWNED_FILES),
+        doctor="passed" if doctor_code == 0 else f"failed ({doctor_code})",
+    )
+    return doctor_code
 
 
 if __name__ == "__main__":

@@ -53,6 +53,10 @@ class UpdateExistingHarnessTests(unittest.TestCase):
             self.assertIn("kept project-owned <target>/scripts/check", result.stdout)
             self.assertIn("kept project-owned <target>/scripts/test-target", result.stdout)
             self.assertIn("kept project-owned <target>/AGENTS.md", result.stdout)
+            self.assertIn("Update complete.", result.stdout)
+            self.assertIn("Managed files updated: 1", result.stdout)
+            self.assertIn("Project-owned files preserved: 6", result.stdout)
+            self.assertIn("Doctor: skipped", result.stdout)
             self.assertEqual((target / "scripts" / "tdd-cycle").read_text(), CURRENT_TDD_CYCLE)
             self.assertEqual((target / "scripts" / "check").read_text(), "#!/usr/bin/env bash\necho custom check\n")
             self.assertEqual((target / "scripts" / "test-target").read_text(), "#!/usr/bin/env bash\necho custom target\n")
@@ -72,8 +76,23 @@ class UpdateExistingHarnessTests(unittest.TestCase):
             result = self.run_cli("update", str(target), "--dry-run", "--no-doctor")
 
             self.assertIn("would update <target>/scripts/tdd-cycle", result.stdout)
+            self.assertIn("Update preview complete.", result.stdout)
+            self.assertIn("Managed files to update: 1", result.stdout)
+            self.assertIn("Project-owned files preserved: 6", result.stdout)
+            self.assertIn("Doctor: skipped", result.stdout)
             self.assertEqual((target / "scripts" / "tdd-cycle").read_text(), original_runner)
             self.assertEqual((target / ".gitignore").read_text(), original_gitignore)
+
+    def test_update_summary_reports_passed_doctor_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            self.make_old_harness(target)
+
+            result = self.run_cli("update", str(target))
+
+            self.assertIn("Running doctor...", result.stdout)
+            self.assertIn("Update complete.", result.stdout)
+            self.assertIn("Doctor: passed", result.stdout)
 
     def test_update_rejects_directory_without_existing_harness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
