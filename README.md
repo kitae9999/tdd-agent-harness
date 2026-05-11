@@ -13,16 +13,42 @@ cycle or claim completion without executable evidence.
 - `SPEC.md`: task specification template focused on acceptance criteria.
 - `TODO.md`: working checklist the agent keeps current.
 - `harness.json`: policy and command configuration.
+- `bin/tdd-agent-harness`: CLI entrypoint for installed copies.
 - `scripts/tdd-cycle`: phase gate runner that records state and logs.
 - `scripts/test-target`: targeted test wrapper.
 - `scripts/check`: full verification wrapper.
 - `scripts/install-harness`: conservative installer for existing repos.
+- `Formula/tdd-agent-harness.rb`: Homebrew-compatible formula for HEAD installs.
 - `docs/harness-design.md`: architecture and adaptation notes.
 - `evals/cases/example.md`: example regression/evaluation case format.
 
 ## Quick Start
 
-### Option A: Install Into An Existing Repo
+### Option A: Homebrew-Compatible Install
+
+This repository can be tapped directly with a custom Homebrew tap URL:
+
+```bash
+brew tap kitae9999/tdd-agent-harness https://github.com/kitae9999/tdd-agent-harness
+brew install --HEAD kitae9999/tdd-agent-harness/tdd-agent-harness
+```
+
+Then install the harness into a project:
+
+```bash
+tdd-agent-harness install /path/to/your-project
+```
+
+Append the TDD section to an existing `AGENTS.md`:
+
+```bash
+tdd-agent-harness install /path/to/your-project --append-agents
+```
+
+This formula currently installs from `main` with `--HEAD`. A stable Homebrew
+install without `--HEAD` should be added after the first versioned release.
+
+### Option B: Install From A Clone
 
 Clone this repository somewhere outside your target project:
 
@@ -35,6 +61,12 @@ Install the harness into your project:
 ```bash
 cd tdd-agent-harness
 ./scripts/install-harness /path/to/your-project
+```
+
+You can also use the CLI from a clone:
+
+```bash
+./bin/tdd-agent-harness install /path/to/your-project
 ```
 
 By default, the installer does not overwrite existing files. If your target repo
@@ -54,7 +86,7 @@ Preview changes without writing files:
 After install, edit `scripts/check` in the target project so it runs that repo's
 full verification suite.
 
-### Option B: Use As A Codex Skill
+### Option C: Use As A Codex Skill
 
 If `tdd-harness-mode` is installed in Codex, you do not need to clone this repo
 inside your target project. Open the target project and ask:

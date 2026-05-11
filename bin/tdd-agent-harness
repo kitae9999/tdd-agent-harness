@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+  cat <<'EOF'
+tdd-agent-harness
+
+Usage:
+  tdd-agent-harness install <target-project> [--append-agents] [--dry-run] [--force] [--no-doctor]
+  tdd-agent-harness doctor [args...]
+  tdd-agent-harness help
+
+Commands:
+  install   Install the harness into an existing project.
+  doctor    Run ./scripts/tdd-cycle doctor in the current project.
+  help      Show this help.
+EOF
+}
+
+cmd="${1:-help}"
+case "$cmd" in
+  install)
+    shift
+    exec "$ROOT/scripts/install-harness" "$@"
+    ;;
+  doctor)
+    shift
+    if [[ ! -x "./scripts/tdd-cycle" ]]; then
+      echo "scripts/tdd-cycle is missing or not executable in the current project." >&2
+      exit 66
+    fi
+    exec ./scripts/tdd-cycle doctor "$@"
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $cmd" >&2
+    usage >&2
+    exit 64
+    ;;
+esac

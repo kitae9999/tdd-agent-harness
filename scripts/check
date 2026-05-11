@@ -107,6 +107,12 @@ if [[ "$ran" -eq 0 ]]; then
   if [[ -f scripts/install-harness ]]; then
     python3 -c "import pathlib; compile(pathlib.Path('scripts/install-harness').read_text(), 'scripts/install-harness', 'exec')"
   fi
+  if [[ -f bin/tdd-agent-harness ]]; then
+    bash -n bin/tdd-agent-harness
+  fi
+  if [[ -f Formula/tdd-agent-harness.rb ]] && command -v ruby >/dev/null 2>&1; then
+    ruby -c Formula/tdd-agent-harness.rb >/dev/null
+  fi
   bash -n scripts/check
   bash -n scripts/test-target
   echo "No project-specific check was detected; validated harness scripts only."
