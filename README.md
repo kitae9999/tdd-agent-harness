@@ -16,24 +16,70 @@ cycle or claim completion without executable evidence.
 - `scripts/tdd-cycle`: phase gate runner that records state and logs.
 - `scripts/test-target`: targeted test wrapper.
 - `scripts/check`: full verification wrapper.
+- `scripts/install-harness`: conservative installer for existing repos.
 - `docs/harness-design.md`: architecture and adaptation notes.
 - `evals/cases/example.md`: example regression/evaluation case format.
 
 ## Quick Start
 
-1. Copy these files into the target project.
-2. Edit `scripts/check` so it runs the project's full verification suite.
-3. Use `SPEC.md` to describe the next feature or bug fix.
-4. Start the TDD cycle:
+### Option A: Install Into An Existing Repo
+
+Clone this repository somewhere outside your target project:
+
+```bash
+git clone https://github.com/kitae9999/tdd-agent-harness.git
+```
+
+Install the harness into your project:
+
+```bash
+cd tdd-agent-harness
+./scripts/install-harness /path/to/your-project
+```
+
+By default, the installer does not overwrite existing files. If your target repo
+already has `AGENTS.md`, it prints a merge note instead of replacing it. To append
+the TDD section automatically:
+
+```bash
+./scripts/install-harness /path/to/your-project --append-agents
+```
+
+Preview changes without writing files:
+
+```bash
+./scripts/install-harness /path/to/your-project --dry-run
+```
+
+After install, edit `scripts/check` in the target project so it runs that repo's
+full verification suite.
+
+### Option B: Use As A Codex Skill
+
+If `tdd-harness-mode` is installed in Codex, you do not need to clone this repo
+inside your target project. Open the target project and ask:
+
+```text
+TDD harness mode로 이 기능 구현해줘
+```
+
+The skill installs the bundled harness files if they are missing, preserving
+existing `AGENTS.md`, `scripts/check`, and `scripts/test-target` unless you
+explicitly ask it to merge or replace them.
+
+### Run A TDD Cycle
+
+1. Use `SPEC.md` to describe the next feature or bug fix.
+2. Start the TDD cycle:
 
 ```bash
 ./scripts/tdd-cycle start --id auth-rate-limit --spec SPEC.md
 ```
 
-5. Let the agent infer use cases and ask clarification questions for any product
+3. Let the agent infer use cases and ask clarification questions for any product
    decision that changes correctness. For detailed UI or frontend-originated
    flows, the agent should ask whether to include Playwright/browser verification.
-6. Record the plan gate:
+4. Record the plan gate:
 
 ```bash
 ./scripts/tdd-cycle plan \
@@ -42,14 +88,14 @@ cycle or claim completion without executable evidence.
   --playwright not-applicable
 ```
 
-7. Write or ask the agent to write the failing test.
-8. Prove the red phase:
+5. Write or ask the agent to write the failing test.
+6. Prove the red phase:
 
 ```bash
 ./scripts/tdd-cycle red -- ./scripts/test-target pytest tests/test_auth.py::test_rate_limit
 ```
 
-9. Confirm semantic red:
+7. Confirm semantic red:
 
 ```bash
 ./scripts/tdd-cycle confirm-red \
@@ -57,20 +103,20 @@ cycle or claim completion without executable evidence.
   --reason "The focused test fails because login failures are not rate limited yet."
 ```
 
-10. Implement the smallest passing change.
-11. Prove the green phase:
+8. Implement the smallest passing change.
+9. Prove the green phase:
 
 ```bash
 ./scripts/tdd-cycle green -- ./scripts/test-target pytest tests/test_auth.py::test_rate_limit
 ```
 
-12. Run the full verification gate:
+10. Run the full verification gate:
 
 ```bash
 ./scripts/tdd-cycle check
 ```
 
-13. Review the final diff and produce the report:
+11. Review the final diff and produce the report:
 
 ```bash
 ./scripts/tdd-cycle review

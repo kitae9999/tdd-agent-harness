@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import shutil
+import stat
+import subprocess
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+FILES = [
+    "harness.json",
+    "SPEC.md",
+    "TODO.md",
+    "scripts/tdd-cycle",
+    "scripts/check",
+    "scripts/test-target",
+]
+
+TDD_AGENTS_SECTION = """\
+
+## TDD Harness Mode
+
+When a task is requested under TDD harness mode:
+
+1. Infer use cases and edge cases before writing tests.
+2. Ask clarification questions when a developer decision changes correctness.
+3. For detailed UI or frontend-originated flows, ask whether Playwright/browser verification should be included.
+4. Run `./scripts/tdd-cycle doctor` when installing or validating the harness.
+5. Run `./scripts/tdd-cycle plan --summary ... --test-command ... --playwright ...` before red.
+6. Add or update a focused failing test before production code.
+7. Run `./scripts/tdd-cycle red -- <targeted test command>`.
+8. Run `./scripts/tdd-cycle confirm-red --category <category> --reason <reason>`.
+9. Implement the smallest change to pass the focused test.
+10. Run `./scripts/tdd-cycle green -- <same targeted test command>`.
+11. Run `./scripts/tdd-cycle check`.
+12. Run `./scripts/tdd-cycle review`.
+13. Do not claim completion if full check failed or was not run.
+"""
+
+
+def rel(path: Path, base: Path) -> str:
+    try:
+        return str(path.relative_to(base))
+    except ValueError:
+        return str(path)
+
+
+def copy_file(src: Path, dst: Path, *, force: bool, dry_run: bool) -> str:
+    if dst.exists() and not force:
+        return f"skip existing {dst}"
+    if dry_run:
+        return f"would copy {src} -> {dst}"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    return f"copied {src} -> {dst}"
+
+
+def make_executable(path: Path, *, dry_run: bool) -> str:
+    if dry_run:
+        return f"would chmod +x {path}"
+    if not path.exists():
+        return f"skip chmod missing {path}"
+    mode = path.stat().st_mode
+    path.chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    return f"chmod +x {path}"
+
+
+def ensure_gitignore(target: Path, *, dry_run: bool) -> str:
+    path = target / ".gitignore"
+    if path.exists():
+        text = path.read_text(encoding="utf-8")
+        if any(line.strip() == ".agent/" for line in text.splitlines()):
+            return ".agent/ already present in .gitignore"
+        if dry_run:
+            return "would append .agent/ to .gitignore"
+        suffix = "" if text.endswith("\n") or not text else "\n"
+        path.write_text(text + suffix + ".agent/\n", encoding="utf-8")
+        return "appended .agent/ to .gitignore"
+    if dry_run:
+        return "would create .gitignore with .agent/"
+    path.write_text(".agent/\n", encoding="utf-8")
+    return "created .gitignore with .agent/"
+
+
+def install_agents(src: Path, target: Path, *, append: bool, force: bool, dry_run: bool) -> list[str]:
+    dst = target / "AGENTS.md"
+    if not dst.exists():
+        return [copy_file(src, dst, force=force, dry_run=dry_run)]
+
+    text = dst.read_text(encoding="utf-8")
+    if "## TDD Harness Mode" in text:
+        return ["AGENTS.md already contains TDD Harness Mode section"]
+    if not append:
+        return [
+            "skip existing AGENTS.md",
+            "merge the TDD Harness Mode section manually or rerun with --append-agents",
+        ]
+    if dry_run:
+        return ["would append TDD Harness Mode section to AGENTS.md"]
+    suffix = "" if text.endswith("\n") else "\n"
+    dst.write_text(text + suffix + TDD_AGENTS_SECTION, encoding="utf-8")
+    return ["appended TDD Harness Mode section to AGENTS.md"]
+
+
+def run_doctor(target: Path) -> int:
+    result = subprocess.run(
+        ["./scripts/tdd-cycle", "doctor"],
+        cwd=target,
+        text=True,
+    )
+    return int(result.returncode)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Install TDD Agent Harness into a target repo.")
+    parser.add_argument("target", help="Target project directory.")
+    parser.add_argument("--force", action="store_true", help="Overwrite existing harness files except AGENTS.md merge.")
+    parser.add_argument("--append-agents", action="store_true", help="Append TDD Harness Mode section to existing AGENTS.md.")
+    parser.add_argument("--dry-run", action="store_true", help="Print intended changes without writing files.")
+    parser.add_argument("--no-doctor", action="store_true", help="Skip running ./scripts/tdd-cycle doctor after install.")
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+    target = Path(args.target).expanduser().resolve()
+    if not target.exists() or not target.is_dir():
+        print(f"target directory does not exist: {target}", file=sys.stderr)
+        return 2
+
+    messages: list[str] = []
+    for name in FILES:
+        messages.append(
+            copy_file(ROOT / name, target / name, force=args.force, dry_run=args.dry_run)
+        )
+    messages.extend(
+        install_agents(
+            ROOT / "AGENTS.md",
+            target,
+            append=args.append_agents,
+            force=args.force,
+            dry_run=args.dry_run,
+        )
+    )
+    messages.append(ensure_gitignore(target, dry_run=args.dry_run))
+    for name in ("scripts/tdd-cycle", "scripts/check", "scripts/test-target"):
+        messages.append(make_executable(target / name, dry_run=args.dry_run))
+
+    for message in messages:
+        print(message.replace(str(ROOT), "<harness>").replace(str(target), "<target>"))
+
+    if args.dry_run or args.no_doctor:
+        return 0
+
+    print("")
+    print("Running doctor...")
+    sys.stdout.flush()
+    return run_doctor(target)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

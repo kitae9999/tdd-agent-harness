@@ -104,6 +104,9 @@ if [[ "$ran" -eq 0 ]]; then
     exit 65
   fi
   python3 -c "import pathlib; compile(pathlib.Path('scripts/tdd-cycle').read_text(), 'scripts/tdd-cycle', 'exec')"
+  if [[ -f scripts/install-harness ]]; then
+    python3 -c "import pathlib; compile(pathlib.Path('scripts/install-harness').read_text(), 'scripts/install-harness', 'exec')"
+  fi
   bash -n scripts/check
   bash -n scripts/test-target
   echo "No project-specific check was detected; validated harness scripts only."
