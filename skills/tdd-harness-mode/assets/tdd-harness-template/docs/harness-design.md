@@ -4,16 +4,17 @@ This harness separates agent behavior from project verification.
 
 ## Layers
 
-1. Agent instructions: `AGENTS.md`
-2. Root task templates: `SPEC.md`, `TODO.md`
-3. Task-local documents, state, and logs:
+1. Agent router: `AGENTS.md`
+2. Detailed TDD instructions: `TDD_HARNESS.md`
+3. Root task templates: `SPEC.md`, `TODO.md`
+4. Task-local documents, state, and logs:
    - `.agent/tasks/<task-id>/SPEC.md`
    - `.agent/tasks/<task-id>/TODO.md`
    - `.agent/tasks/<task-id>/state.json`
    - `.agent/tasks/<task-id>/logs/`
    - `.agent/tasks/<task-id>/report.md`
-4. Gate runner: `scripts/tdd-cycle`
-5. Project commands: `scripts/test-target`, `scripts/check`
+5. Gate runner: `scripts/tdd-cycle`
+6. Project commands: `scripts/test-target`, `scripts/check`
 
 The gate runner does not know the target language or framework. It only enforces
 phase order and records evidence.
@@ -169,11 +170,12 @@ Use the installed CLI to update an older harness inside an existing project:
 ```bash
 tdd-agent-harness update /path/to/project --dry-run
 tdd-agent-harness update /path/to/project
+tdd-agent-harness update /path/to/project --append-agents
 ```
 
 The update command is conservative. It refreshes managed core files such as
-`scripts/tdd-cycle`, ensures `.agent/` is gitignored, and runs doctor unless
-`--no-doctor` is passed.
+`TDD_HARNESS.md` and `scripts/tdd-cycle`, ensures `.agent/` is gitignored, and
+runs doctor unless `--no-doctor` is passed.
 
 It does not overwrite project-owned files:
 
@@ -187,6 +189,10 @@ It does not overwrite project-owned files:
 Those files often contain repo-specific policy, task state, or verification
 commands. The updater reports them so a developer can review template changes
 manually.
+
+With `--append-agents`, the updater appends only the small `AGENTS.md` router
+that points to `TDD_HARNESS.md`. It does not append the full TDD policy into
+`AGENTS.md`.
 
 ## UI And Browser Verification
 

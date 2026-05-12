@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 FILES = [
+    "TDD_HARNESS.md",
     "harness.json",
     "SPEC.md",
     "TODO.md",
@@ -24,30 +25,12 @@ TDD_AGENTS_SECTION = """\
 
 ## TDD Harness Mode
 
-TDD Harness Mode is available in this repo only when the developer explicitly
-asks for it, for example by saying "TDD harness mode", "TDD로 구현", or
-"red/green/check/review로 진행".
+Do not apply TDD Harness Mode by default.
 
-For ordinary coding requests, follow the repo's normal instructions and do not
-force the TDD harness workflow.
+When the developer explicitly asks for TDD, TDD Harness Mode, or
+red/green/check/review, read `TDD_HARNESS.md` and follow it.
 
-When TDD Harness Mode is explicitly requested, use task-local documents and
-evidence:
-
-```bash
-./scripts/tdd-cycle start --id <task-id> --reset
-./scripts/tdd-cycle paths --task <task-id>
-./scripts/tdd-cycle plan --task <task-id> --summary ... --test-command ... --playwright ...
-./scripts/tdd-cycle red --task <task-id> -- <targeted test command>
-./scripts/tdd-cycle confirm-red --task <task-id> --category <category> --reason <reason>
-./scripts/tdd-cycle green --task <task-id> -- <same targeted test command>
-./scripts/tdd-cycle check --task <task-id>
-./scripts/tdd-cycle review --task <task-id>
-```
-
-Root `SPEC.md` and `TODO.md` are templates. In TDD Harness Mode, read and update
-the task-local `SPEC.md` and `TODO.md` shown by `./scripts/tdd-cycle paths`, not
-the root templates.
+For ordinary coding requests, follow the normal repository instructions.
 """
 
 

@@ -9,7 +9,8 @@ cycle or claim completion without executable evidence.
 
 ## What Is Included
 
-- `AGENTS.md`: opt-in operating rules for TDD Harness Mode.
+- `AGENTS.md`: a short opt-in router for TDD Harness Mode.
+- `TDD_HARNESS.md`: detailed TDD Harness Mode operating rules.
 - `SPEC.md`: root task specification template.
 - `TODO.md`: root task checklist template.
 - `harness.json`: policy and command configuration.
@@ -40,7 +41,7 @@ Then install the harness into a project:
 tdd-agent-harness install /path/to/your-project
 ```
 
-Append the TDD section to an existing `AGENTS.md`:
+Append the TDD router section to an existing `AGENTS.md`:
 
 ```bash
 tdd-agent-harness install /path/to/your-project --append-agents
@@ -63,9 +64,12 @@ tdd-agent-harness update /path/to/your-project --dry-run
 tdd-agent-harness update /path/to/your-project
 ```
 
-`update` overwrites only managed core harness files, currently
-`scripts/tdd-cycle`. It preserves project-owned files and prints review notes for
-them:
+`update` overwrites only managed core harness files:
+
+- `TDD_HARNESS.md`
+- `scripts/tdd-cycle`
+
+It preserves project-owned files and prints review notes for them:
 
 - `AGENTS.md`
 - `harness.json`
@@ -75,7 +79,14 @@ them:
 - `scripts/test-target`
 
 This keeps repo-specific test commands and agent instructions intact. Review the
-printed project-owned files manually if you want to adopt new template guidance.
+printed project-owned files manually if you want to adopt new router guidance in
+an existing `AGENTS.md`.
+
+To append the small router section to an existing `AGENTS.md` during update:
+
+```bash
+tdd-agent-harness update /path/to/your-project --append-agents
+```
 
 ### Option B: Install From A Clone
 
@@ -100,7 +111,7 @@ You can also use the CLI from a clone:
 
 By default, the installer does not overwrite existing files. If your target repo
 already has `AGENTS.md`, it prints a merge note instead of replacing it. To append
-the TDD section automatically:
+the small TDD router section automatically:
 
 ```bash
 ./scripts/install-harness /path/to/your-project --append-agents
@@ -132,7 +143,8 @@ explicitly ask it to merge or replace them.
 
 TDD Harness Mode is opt-in. Use it when the developer explicitly asks for TDD
 Harness Mode, TDD, or red/green/check/review. Ordinary coding requests should
-follow the target repo's normal instructions.
+follow the target repo's normal instructions. When TDD is requested, agents
+should read `TDD_HARNESS.md` for the full workflow.
 
 1. Start the TDD cycle:
 
@@ -253,7 +265,7 @@ Success criteria:
 - `./scripts/tdd-cycle check` passes
 
 Required sequence:
-1. Read `AGENTS.md`, `SPEC.md`, and relevant code.
+1. Read `AGENTS.md`, `TDD_HARNESS.md`, `SPEC.md`, and relevant code.
 2. Infer use cases and edge cases.
 3. Ask clarification questions before test generation when a developer decision changes correctness.
    Ask whether to use Playwright/browser verification for detailed UI or frontend-originated flows.

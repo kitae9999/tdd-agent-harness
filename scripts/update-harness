@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 MANAGED_FILES = [
+    "TDD_HARNESS.md",
     "scripts/tdd-cycle",
 ]
 
@@ -25,6 +26,18 @@ PROJECT_OWNED_FILES = [
     "scripts/test-target",
 ]
 
+TDD_AGENTS_SECTION = """\
+
+## TDD Harness Mode
+
+Do not apply TDD Harness Mode by default.
+
+When the developer explicitly asks for TDD, TDD Harness Mode, or
+red/green/check/review, read `TDD_HARNESS.md` and follow it.
+
+For ordinary coding requests, follow the normal repository instructions.
+"""
+
 
 def printable(message: str, target: Path) -> str:
     return message.replace(str(ROOT), "<harness>").replace(str(target), "<target>")
@@ -32,6 +45,8 @@ def printable(message: str, target: Path) -> str:
 
 def looks_like_installed_harness(target: Path) -> bool:
     if (target / "scripts" / "tdd-cycle").exists():
+        return True
+    if (target / "TDD_HARNESS.md").exists():
         return True
     if (target / "harness.json").exists():
         return True
@@ -60,6 +75,22 @@ def project_owned_notice(src: Path, dst: Path) -> str:
     if src.exists() and filecmp.cmp(src, dst, shallow=False):
         return f"kept project-owned {dst}; already matches template"
     return f"kept project-owned {dst}; compare manually before changing"
+
+
+def append_agents_router(target: Path, *, dry_run: bool) -> str:
+    path = target / "AGENTS.md"
+    if not path.exists():
+        return "missing AGENTS.md; run install if this file should exist"
+    text = path.read_text(encoding="utf-8")
+    if "TDD_HARNESS.md" in text:
+        return "AGENTS.md already points to TDD_HARNESS.md"
+    if "## TDD Harness Mode" in text:
+        return "AGENTS.md already has TDD Harness Mode section; compare manually before changing"
+    if dry_run:
+        return "would append TDD Harness Mode router to AGENTS.md"
+    suffix = "" if text.endswith("\n") else "\n"
+    path.write_text(text + suffix + TDD_AGENTS_SECTION, encoding="utf-8")
+    return "appended TDD Harness Mode router to AGENTS.md"
 
 
 def ensure_gitignore(target: Path, *, dry_run: bool) -> str:
@@ -103,6 +134,7 @@ def print_summary(*, dry_run: bool, managed_count: int, project_owned_count: int
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Safely update an installed TDD Agent Harness.")
     parser.add_argument("target", help="Target project directory.")
+    parser.add_argument("--append-agents", action="store_true", help="Append the small TDD router section to AGENTS.md.")
     parser.add_argument("--dry-run", action="store_true", help="Print intended changes without writing files.")
     parser.add_argument("--no-doctor", action="store_true", help="Skip running ./scripts/tdd-cycle doctor after update.")
     return parser
@@ -128,6 +160,8 @@ def main() -> int:
         messages.append(copy_managed(ROOT / name, target / name, dry_run=args.dry_run))
     for name in PROJECT_OWNED_FILES:
         messages.append(project_owned_notice(ROOT / name, target / name))
+    if args.append_agents:
+        messages.append(append_agents_router(target, dry_run=args.dry_run))
     messages.append(ensure_gitignore(target, dry_run=args.dry_run))
 
     for message in messages:

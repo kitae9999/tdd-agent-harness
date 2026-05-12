@@ -498,6 +498,7 @@ def doctor_findings(config: dict[str, Any]) -> dict[str, Any]:
         "git_repo": is_git_repo(),
         "harness_json": (ROOT / "harness.json").exists(),
         "agents_md": (ROOT / "AGENTS.md").exists(),
+        "tdd_harness_md": (ROOT / "TDD_HARNESS.md").exists(),
         "spec_md": (ROOT / "SPEC.md").exists(),
         "todo_md": (ROOT / "TODO.md").exists(),
         "agent_gitignored": ".agent" in read_text_if_exists(ROOT / ".gitignore"),
@@ -528,6 +529,8 @@ def doctor_findings(config: dict[str, Any]) -> dict[str, Any]:
             warnings.append(f"{path} is {status}.")
     if not checks["agent_gitignored"]:
         warnings.append(".agent is not listed in .gitignore.")
+    if not checks["tdd_harness_md"]:
+        warnings.append("TDD_HARNESS.md is missing.")
     if package and not any(name in scripts for name in ("test", "lint", "typecheck")):
         warnings.append("package.json exists but no test/lint/typecheck script was detected.")
     if not checks["tests_dir"] and not checks["pyproject_or_pytest"] and not checks["cargo_toml"] and not checks["go_mod"] and not package:

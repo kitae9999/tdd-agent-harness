@@ -11,6 +11,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TDD_CYCLE = REPO_ROOT / "scripts" / "tdd-cycle"
 ROOT_AGENTS = REPO_ROOT / "AGENTS.md"
+ROOT_TDD_HARNESS = REPO_ROOT / "TDD_HARNESS.md"
 
 
 class TaskLocalDefaultTests(unittest.TestCase):
@@ -74,12 +75,18 @@ class TaskLocalDefaultTests(unittest.TestCase):
             self.assertIn("Logs: .agent/tasks/checkout-flow/logs", result.stdout)
             self.assertIn("Report: .agent/tasks/checkout-flow/report.md", result.stdout)
 
-    def test_agents_policy_is_available_not_global_enforced(self) -> None:
-        text = ROOT_AGENTS.read_text()
+    def test_agents_policy_is_router_not_full_harness_policy(self) -> None:
+        agents = ROOT_AGENTS.read_text()
+        tdd_harness = ROOT_TDD_HARNESS.read_text()
 
-        self.assertIn("TDD Harness Mode is available", text)
-        self.assertIn("only when the developer explicitly asks", text)
-        self.assertNotIn("Use test-driven development. The expected output", text)
+        self.assertIn("Do not apply TDD Harness Mode by default.", agents)
+        self.assertIn("read `TDD_HARNESS.md` and follow it", agents)
+        self.assertNotIn("Required TDD Sequence", agents)
+        self.assertNotIn("Use test-driven development. The expected output", agents)
+
+        self.assertIn("TDD Harness Mode is active only when the developer explicitly asks", tdd_harness)
+        self.assertIn("## Required TDD Sequence", tdd_harness)
+        self.assertIn("./scripts/tdd-cycle done --task <task-id>", tdd_harness)
 
 
 if __name__ == "__main__":

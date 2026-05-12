@@ -11,6 +11,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CLI = REPO_ROOT / "bin" / "tdd-agent-harness"
 CURRENT_TDD_CYCLE = (REPO_ROOT / "scripts" / "tdd-cycle").read_text()
+CURRENT_TDD_HARNESS = (REPO_ROOT / "TDD_HARNESS.md").read_text()
 
 
 class UpdateExistingHarnessTests(unittest.TestCase):
@@ -50,14 +51,16 @@ class UpdateExistingHarnessTests(unittest.TestCase):
             result = self.run_cli("update", str(target), "--no-doctor")
 
             self.assertIn("updated <target>/scripts/tdd-cycle", result.stdout)
+            self.assertIn("updated <target>/TDD_HARNESS.md", result.stdout)
             self.assertIn("kept project-owned <target>/scripts/check", result.stdout)
             self.assertIn("kept project-owned <target>/scripts/test-target", result.stdout)
             self.assertIn("kept project-owned <target>/AGENTS.md", result.stdout)
             self.assertIn("Update complete.", result.stdout)
-            self.assertIn("Managed files updated: 1", result.stdout)
+            self.assertIn("Managed files updated: 2", result.stdout)
             self.assertIn("Project-owned files preserved: 6", result.stdout)
             self.assertIn("Doctor: skipped", result.stdout)
             self.assertEqual((target / "scripts" / "tdd-cycle").read_text(), CURRENT_TDD_CYCLE)
+            self.assertEqual((target / "TDD_HARNESS.md").read_text(), CURRENT_TDD_HARNESS)
             self.assertEqual((target / "scripts" / "check").read_text(), "#!/usr/bin/env bash\necho custom check\n")
             self.assertEqual((target / "scripts" / "test-target").read_text(), "#!/usr/bin/env bash\necho custom target\n")
             self.assertEqual((target / "AGENTS.md").read_text(), "# Custom Agents\n")
@@ -76,12 +79,41 @@ class UpdateExistingHarnessTests(unittest.TestCase):
             result = self.run_cli("update", str(target), "--dry-run", "--no-doctor")
 
             self.assertIn("would update <target>/scripts/tdd-cycle", result.stdout)
+            self.assertIn("would update <target>/TDD_HARNESS.md", result.stdout)
             self.assertIn("Update preview complete.", result.stdout)
-            self.assertIn("Managed files to update: 1", result.stdout)
+            self.assertIn("Managed files to update: 2", result.stdout)
             self.assertIn("Project-owned files preserved: 6", result.stdout)
             self.assertIn("Doctor: skipped", result.stdout)
             self.assertEqual((target / "scripts" / "tdd-cycle").read_text(), original_runner)
+            self.assertFalse((target / "TDD_HARNESS.md").exists())
             self.assertEqual((target / ".gitignore").read_text(), original_gitignore)
+
+    def test_update_can_append_agents_router_when_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            self.make_old_harness(target)
+
+            result = self.run_cli("update", str(target), "--append-agents", "--no-doctor")
+
+            agents = (target / "AGENTS.md").read_text()
+            self.assertIn("appended TDD Harness Mode router to AGENTS.md", result.stdout)
+            self.assertIn("# Custom Agents", agents)
+            self.assertIn("read `TDD_HARNESS.md` and follow it", agents)
+            self.assertNotIn("## Required TDD Sequence", agents)
+
+    def test_install_appends_router_and_copies_detailed_harness_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            (target / "AGENTS.md").write_text("# Existing Project Rules\n\nKeep these.\n")
+
+            result = self.run_cli("install", str(target), "--append-agents", "--no-doctor")
+
+            agents = (target / "AGENTS.md").read_text()
+            self.assertIn("appended TDD Harness Mode section to AGENTS.md", result.stdout)
+            self.assertIn("# Existing Project Rules", agents)
+            self.assertIn("read `TDD_HARNESS.md` and follow it", agents)
+            self.assertNotIn("## Required TDD Sequence", agents)
+            self.assertEqual((target / "TDD_HARNESS.md").read_text(), CURRENT_TDD_HARNESS)
 
     def test_update_summary_reports_passed_doctor_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

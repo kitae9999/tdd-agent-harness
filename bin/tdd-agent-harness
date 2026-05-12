@@ -9,7 +9,7 @@ tdd-agent-harness
 
 Usage:
   tdd-agent-harness install <target-project> [--append-agents] [--dry-run] [--force] [--no-doctor]
-  tdd-agent-harness update <target-project> [--dry-run] [--no-doctor]
+  tdd-agent-harness update <target-project> [--append-agents] [--dry-run] [--no-doctor]
   tdd-agent-harness doctor [args...]
   tdd-agent-harness help
 

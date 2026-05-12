@@ -11,6 +11,7 @@ class TddAgentHarness < Formula
 
   def install
     libexec.install "AGENTS.md"
+    libexec.install "TDD_HARNESS.md"
     libexec.install "SPEC.md"
     libexec.install "TODO.md"
     libexec.install "harness.json"

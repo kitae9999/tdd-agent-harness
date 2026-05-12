@@ -59,11 +59,12 @@ available, update conservatively before starting new work:
 ```bash
 tdd-agent-harness update . --dry-run
 tdd-agent-harness update .
+tdd-agent-harness update . --append-agents
 ```
 
-The update command refreshes managed core files such as `scripts/tdd-cycle` and
-preserves project-owned files like `AGENTS.md`, `harness.json`, `scripts/check`,
-and `scripts/test-target`.
+The update command refreshes managed core files such as `TDD_HARNESS.md` and
+`scripts/tdd-cycle`, and preserves project-owned files like `AGENTS.md`,
+`harness.json`, `scripts/check`, and `scripts/test-target`.
 
 ## If The Repo Does Not Have The Harness
 
@@ -74,7 +75,7 @@ Install conservatively:
 1. Inspect the repo first: `rg --files`, existing `AGENTS.md`, test framework, package scripts, and existing `scripts/`.
 2. Do not overwrite existing user files blindly.
 3. Copy missing template files from `assets/tdd-harness-template/`.
-4. If `AGENTS.md` already exists, append or merge a short "TDD Harness Mode" section instead of replacing it.
+4. If `AGENTS.md` already exists, append or merge only the short TDD router section that points to `TDD_HARNESS.md` instead of replacing it.
 5. If `scripts/check` already exists, keep it and ensure it runs the full verification suite.
 6. If `scripts/test-target` already exists, keep it and ensure it can run the focused test command.
 7. Ensure `scripts/tdd-cycle`, `scripts/check`, and `scripts/test-target` are executable.
@@ -86,7 +87,7 @@ After installation, use the normal phase order.
 
 When a user asks for a code change under this skill:
 
-1. Read `AGENTS.md`, `SPEC.md` if present, and relevant source/test files.
+1. Read `AGENTS.md`, `TDD_HARNESS.md` if present, `SPEC.md` if present, and relevant source/test files.
 2. Infer likely use cases, edge cases, and acceptance criteria from the request and codebase.
 3. Separate inferred defaults from developer decision points.
 4. If any decision point changes the test oracle or public behavior, ask concise questions and stop before editing tests.
